@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>あかちゃん キーボードあそび ★ Baby Toy</title>
+    <!-- Tailwind CSS for modern layout styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* タブレットでのスワイプや長押しによるブラウザ動作（スクロール、ズーム、コンテキストメニュー）を完全に無効化 */
+        body, html, canvas {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            background-color: #0f172a;
+        }
+        /* ふわっと消えるメッセージのアニメーション */
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        .animate-pulse-slow {
+            animation: pulse-slow 3s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="relative font-sans text-white">
+
+    <!-- 1. スタート画面（ブラウザのサウンド再生制限を解除するために必要） -->
+    <div id="start-screen" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-900 transition-opacity duration-500 cursor-pointer text-center p-6">
+        <div class="space-y-6 max-w-md">
+            <div class="text-7xl animate-bounce">🎹🌟👶</div>
+            <h1 class="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-amber-300 to-cyan-400">
+                あかちゃんキーボード
+            </h1>
+            <p class="text-sm text-slate-400">
+                キーボードのキーをたたいたり、<br>
+                がめんをタッチすると、きれいな音と図形が出ます！
+            </p>
+            <button class="px-8 py-4 bg-gradient-to-r from-pink-500 to-yellow-500 rounded-full text-xl font-bold text-white shadow-lg hover:scale-105 active:scale-95 transition-all animate-pulse duration-1000">
+                あそぶ（スタート！）
+            </button>
+            <div class="text-xs text-slate-500 pt-4">
+                ※音が出ますのでボリュームにご注意ください
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. メインの描画キャンバス -->
+    <canvas id="canvas" class="block w-full h-full"></canvas>
+
+    <!-- 3. 保護者向けコントロール（誤操作防止：長押しで解除） -->
+    <div class="absolute top-4 right-4 z-40 flex items-center gap-2">
+        <!-- 長押しボタン -->
+        <button id="menu-btn" class="px-4 py-2 bg-slate-800/80 border border-slate-700/50 hover:bg-slate-700 backdrop-blur-md rounded-full text-xs text-slate-300 transition-all active:scale-95 flex items-center gap-1.5 shadow-md">
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
+            <span>設定 (長押し 2秒)</span>
+        </button>
+    </div>
+
+    <!-- 4. 設定用ポップアップモーダル（スクロール可能にしてガイドを追加） -->
+    <div id="settings-modal" class="hidden absolute inset-0 z-40 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-slate-800 border border-slate-700 p-6 rounded-3xl max-w-md w-full space-y-6 shadow-2xl my-8">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+                <h2 class="text-lg font-bold flex items-center gap-2 text-amber-400">
+                    🛠 保護者メニュー ＆ ロック設定
+                </h2>
+                <button id="close-settings" class="text-slate-400 hover:text-white text-xl">✕</button>
+            </div>
+            
+            <div class="space-y-4">
+                <!-- フルスクリーン＆キーボードロックのステータス -->
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1.5 flex justify-between">
+                        <span>画面表示・誤入力ガード</span>
+                        <span id="lock-status" class="text-xs text-amber-400">非ロック状態</span>
+                    </label>
+                    <button id="fullscreen-btn" class="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg">
+                        <span>🖥 フルスクリーン ＆ キーボードロック開始</span>
+                    </button>
+                    <p class="text-[10px] text-slate-400 mt-1">※フルスクリーン中のみ、特殊キー（TabやAlt等）の無効化ロックが作動します。</p>
+                </div>
+                
+                <!-- 音量調節 -->
+                <div>
+                    <div class="flex justify-between text-sm text-slate-400 mb-1">
+                        <span>音量 (Volume)</span>
+                        <span id="volume-val">50%</span>
+                    </div>
+                    <input type="range" id="volume-slider" min="0" max="100" value="50" class="w-full accent-pink-500 bg-slate-700 rounded-lg appearance-none h-2 cursor-pointer">
+                </div>
+
+                <!-- 音色セレクト -->
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1.5">音の種類 (Synth Type)</label>
+                    <select id="synth-type" class="w-full bg-slate-700 border border-slate-600 text-white rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-pink-500">
+                        <option value="sine">🔮 オルゴール (サイン波)</option>
+                        <option value="triangle">🧸 やさしいピコピコ (三角波)</option>
+                        <option value="sine-chord">✨ キラキラ・和音</option>
+                    </select>
+                </div>
+
+                <!-- 大人向け：物理キーボード完全ロックのアドバイス -->
+                <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700/50 space-y-2">
+                    <h3 class="text-xs font-bold text-amber-400 flex items-center gap-1">
+                        <span>🔒 完全に誤操作を防ぐ（PC/スマホ設定のコツ）</span>
+                    </h3>
+                    <div class="text-[11px] text-slate-300 space-y-1.5 leading-relaxed">
+                        <p><strong>Windows：</strong></p>
+                        <ul class="list-disc pl-4 space-y-0.5 text-slate-400">
+                            <li>「固定キー機能」のポップアップを防ぐため、<strong>Shiftキーを5回連打して設定を開き、ショートカットキーを無効化</strong>しておくと安心です。</li>
+                            <li>「アクセスガイド（キオスクモード）」を使うと、特定のブラウザ以外の操作を完全にロックできます。</li>
+                        </ul>
+                        <p class="mt-1"><strong>Mac / iPad / iPhone：</strong></p>
+                        <ul class="list-disc pl-4 space-y-0.5 text-slate-400">
+                            <li>OS標準の<strong>「アクセスガイド」</strong>（設定 ➔ アクセシビリティ）をONにし、トリプルクリックで開始すると、ホームボタンや電源ボタンを含めて物理的に画面内だけにロックできます。</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-t border-slate-700 pt-4 text-center">
+                <p class="text-[11px] text-slate-500 leading-relaxed">
+                    赤ちゃんが誤ってボタンを押さないように、元の画面に戻るには右上のボタンを長押しする必要があります。
+                </p>
+                <button id="resume-btn" class="mt-4 w-full py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-sm font-semibold transition-all">
+                    あそびにもどる
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. 画面中央のふわっとしたガイド表示 -->
+    <div id="guide-text" class="absolute bottom-10 left-1/2 -translate-x-1/2 pointer-events-none text-center select-none animate-pulse-slow">
+        <p class="text-sm md:text-base text-slate-500 font-medium">キーボードを叩くか、画面をタッチしてね！ 🎹🌟</p>
+    </div>
+
+    <script>
+        // --- 1. グローバル設定と環境の初期化 ---
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let audioCtx = null;
+        let mainVolume = 0.2; // 初期ボリューム (0.0 〜 1.0)
+        let synthType = 'sine'; // デフォルトのシンセ波形
+
+        // 画面のフルリサイズ追従
+        function resizeCanvas() {
+            canvas.width = window.innerWidth * window.devicePixelRatio;
+            canvas.height = window.innerHeight * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // 鮮やかなカラーパレット
+        const COLORS = [
+            '#FF6347', '#FFA500', '#FFD700', '#32CD32', '#00BFFF', 
+            '#8A2BE2', '#FF1493', '#00FFFF', '#FF69B4', '#ADFF2F'
+        ];
+
+        // 赤ちゃんにウケる絵文字リスト
+        const CHARACTERS = [
+            "★", "♥", "♪", "☀", "☁", "❄", "🍀", "🐱", "🐶", "🐻", 
+            "🐰", "🦁", "🐸", "🐵", "🐤", "🐼", "🚗", "✈", "🚀", "🛸", 
+            "🍎", "🍌", "🍓", "🍉", "👾", "🍬", "🎈", "🔔", "🌟", "🔥"
+        ];
+
+        // 高音質の心地よいピコピコ音階 (C4 ~ C6)
+        const SCALE = [
+            261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, // Do-Re-Mi... C4~B4
+            523.25, 587.33, 659.25, 698.46, 783.99, 880.00, 987.77, // C5~B5
+            1046.50, 1174.66, 1318.51 // C6~E6
+        ];
+
+        // --- 2. シンセサイザー（音響合成）機能 ---
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playSound(pitchIndex) {
+            if (!audioCtx) return;
+            initAudio();
+
+            const baseFreq = SCALE[pitchIndex % SCALE.length];
+            const now = audioCtx.currentTime;
+
+            if (synthType === 'sine-chord') {
+                // キラキラした和音（三和音）
+                playTone(baseFreq, 0.4, 'sine');
+                playTone(baseFreq * 1.25, 0.25, 'sine'); // 長三度
+                playTone(baseFreq * 1.5, 0.25, 'sine');  // 完全五度
+            } else {
+                // シンプルな単音
+                playTone(baseFreq, 0.5, synthType);
+            }
+        }
+
+        function playTone(frequency, relativeVolume, type) {
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            osc.type = type;
+            osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+
+            // 音の減衰（プツプツ鳴らないよう、アタック＆ディケイを設定）
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(relativeVolume * mainVolume, audioCtx.currentTime + 0.02); // 素早いアタック
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.8); // 豊かな余韻
+
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.8);
+        }
+
+        // --- 3. パーティクルシステム（画面エフェクト） ---
+        const particles = [];
+        let flashColor = null;
+        let flashOpacity = 0;
+
+        class Particle {
+            constructor(x, y, char = null) {
+                this.x = x;
+                this.y = y;
+                this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
+                this.size = Math.floor(Math.random() * 60) + 35; // 赤ちゃんが見えやすい大きさ
+                this.char = char || CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
+                
+                // 形状決定：円、リング、四角、星、テキスト（絵文字）
+                this.shapes = ["circle", "ring", "square", "star", "text"];
+                this.shape = char ? "text" : this.shapes[Math.floor(Math.random() * this.shapes.length)];
+
+                // 上向きに勢いよく飛び出す物理計算
+                const angle = Math.random() * (Math.PI * 0.6) - (Math.PI * 0.8); // -36度〜-144度の範囲（上方）
+                const speed = Math.random() * 12 + 6;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+
+                this.rotation = 0;
+                this.rotSpeed = Math.random() * 6 - 3;
+                this.alpha = 1;
+                this.decay = Math.random() * 0.015 + 0.01; // 徐々に消えるスピード
+                this.gravity = 0.3; // 重力
+            }
+
+            update() {
+                this.vy += this.gravity;
+                this.x += this.vx;
+                this.y += this.vy;
+                this.rotation += this.rotSpeed;
+                this.alpha -= this.decay;
+            }
+
+            draw() {
+                if (this.alpha <= 0) return;
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation * Math.PI / 180);
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 6;
+
+                const r = this.size / 2;
+
+                if (this.shape === "circle") {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, r, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.shape === "ring") {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, r, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else if (this.shape === "square") {
+                    ctx.beginPath();
+                    ctx.roundRect(-r, -r, this.size, this.size, 10);
+                    ctx.fill();
+                } else if (this.shape === "star") {
+                    ctx.beginPath();
+                    for (let i = 0; i < 10; i++) {
+                        const curR = i % 2 === 0 ? r : r / 2;
+                        const currAngle = (i * Math.PI / 5);
+                        ctx.lineTo(Math.cos(currAngle) * curR, Math.sin(currAngle) * curR);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (this.shape === "text") {
+                    ctx.font = `bold ${this.size}px Arial, sans-serif`;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(this.char, 0, 0);
+                }
+
+                ctx.restore();
+            }
+        }
+
+        // --- 4. インタラクションハンドラ ---
+
+        // 入力をキャッチしたときのアクション（中心点 X, Y, オプションのカスタム文字）
+        function triggerResponse(x, y, customChar = null) {
+            // 背景のピカッと光るフラッシュ（即時変化リンク）
+            flashColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+            flashOpacity = 0.35; // 眩しすぎない適度な明るさ
+
+            // サウンド再生（座標からピッチを算出、または完全にランダム）
+            const pitchIndex = Math.floor((x / window.innerWidth) * SCALE.length) + Math.floor(Math.random() * 3);
+            playSound(pitchIndex);
+
+            // パーティクル噴射
+            const count = Math.floor(Math.random() * 8) + 12; // 12~20個
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, customChar));
+            }
+
+            // ガイド文字を徐々に隠す
+            document.getElementById('guide-text').style.opacity = '0.1';
+        }
+
+        // キーボード入力時のブラウザ標準ショートカット無効化（キーダウン）
+        window.addEventListener('keydown', (e) => {
+            // ESCキーは終了や設定に使用するためブロックしない
+            if (e.key === 'Escape') return;
+
+            // F1〜F12、Tab、Alt、Windowsキーなどすべてのキーに対してブラウザ標準動作をブロック
+            e.preventDefault();
+
+            // 表示するキーの文字を抽出
+            let keyStr = e.key;
+            if (keyStr.length > 1) {
+                keyStr = null; // 長い特殊キーはランダムな絵文字をアサイン
+            }
+
+            // 画面の中央周辺のランダムな位置から噴き出す
+            const rx = Math.random() * (window.innerWidth - 200) + 100;
+            const ry = Math.random() * (window.innerHeight - 200) + 100;
+
+            triggerResponse(rx, ry, keyStr);
+        }, { passive: false });
+
+        // さらに徹底してブロック（キープレス・キーアップ）
+        window.addEventListener('keypress', (e) => {
+            if (e.key !== 'Escape') e.preventDefault();
+        }, { passive: false });
+        window.addEventListener('keyup', (e) => {
+            if (e.key !== 'Escape') e.preventDefault();
+        }, { passive: false });
+
+        // マウスおよびタッチイベント
+        window.addEventListener('mousedown', (e) => {
+            // 設定ボタンや設定モーダル上でのタップをバイパス
+            if (e.target.closest('#menu-btn') || e.target.closest('#settings-modal') || e.target.closest('#start-screen')) return;
+            triggerResponse(e.clientX, e.clientY);
+        });
+
+        window.addEventListener('touchstart', (e) => {
+            if (e.target.closest('#menu-btn') || e.target.closest('#settings-modal') || e.target.closest('#start-screen')) return;
+            
+            // すべてのタッチポイント（マルチタッチ対応）で反応
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                triggerResponse(touch.clientX, touch.clientY);
+            }
+        }, { passive: true });
+
+        // --- 5. メインアニメーションループ ---
+        function loop() {
+            // 背景を描画
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+
+            // ピカッと光るフラッシュレイヤーの重ね合わせ
+            if (flashOpacity > 0) {
+                ctx.fillStyle = flashColor;
+                ctx.globalAlpha = flashOpacity;
+                ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+                ctx.globalAlpha = 1;
+                flashOpacity -= 0.03; // フェードアウト
+            }
+
+            // パーティクルの更新と描画
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.update();
+                p.draw();
+
+                // 画面外に落ちたか透明になったら削除
+                if (p.alpha <= 0 || p.y > window.innerHeight + 100) {
+                    particles.splice(i, 1);
+                }
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        // --- 6. システム・UI制御＆誤操作防止ロックシステム ---
+
+        const startScreen = document.getElementById('start-screen');
+        const menuBtn = document.getElementById('menu-btn');
+        const settingsModal = document.getElementById('settings-modal');
+        const closeSettings = document.getElementById('close-settings');
+        const resumeBtn = document.getElementById('resume-btn');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const volumeSlider = document.getElementById('volume-slider');
+        const volumeVal = document.getElementById('volume-val');
+        const synthTypeSelect = document.getElementById('synth-type');
+        const lockStatus = document.getElementById('lock-status');
+
+        // スタート
+        startScreen.addEventListener('click', () => {
+            initAudio();
+            startScreen.classList.add('opacity-0');
+            setTimeout(() => {
+                startScreen.style.display = 'none';
+            }, 500);
+            
+            // 初回ダミーサウンド
+            playSound(7);
+            loop();
+        });
+
+        // 誤操作防止：長押しで親メニューを開く
+        let pressTimer;
+        function startPress() {
+            menuBtn.classList.add('scale-95', 'bg-amber-600/90');
+            pressTimer = setTimeout(() => {
+                settingsModal.classList.remove('hidden');
+                menuBtn.classList.remove('scale-95', 'bg-amber-600/90');
+            }, 2000); // 2秒間押し続けると開く
+        }
+
+        function cancelPress() {
+            clearTimeout(pressTimer);
+            menuBtn.classList.remove('scale-95', 'bg-amber-600/90');
+        }
+
+        // PC（マウス）
+        menuBtn.addEventListener('mousedown', startPress);
+        menuBtn.addEventListener('mouseup', cancelPress);
+        menuBtn.addEventListener('mouseleave', cancelPress);
+        // モバイル（タッチ）
+        menuBtn.addEventListener('touchstart', (e) => {
+            e.stopPropagation();
+            startPress();
+        });
+        menuBtn.addEventListener('touchend', cancelPress);
+
+        // 設定のクローズ
+        function closeMenu() {
+            settingsModal.classList.add('hidden');
+        }
+        closeSettings.addEventListener('click', closeMenu);
+        resumeBtn.addEventListener('click', closeMenu);
+
+        // 音量コントロール
+        volumeSlider.addEventListener('input', (e) => {
+            const val = e.target.value;
+            volumeVal.innerText = `${val}%`;
+            mainVolume = val / 100;
+        });
+
+        // シンセ音色コントロール
+        synthTypeSelect.addEventListener('change', (e) => {
+            synthType = e.target.value;
+        });
+
+        // Web Keyboard Lock API を要求する関数
+        async function requestKeyboardLock() {
+            if (navigator.keyboard && typeof navigator.keyboard.lock === 'function') {
+                try {
+                    // 全てのキーボードショートカットをロック
+                    await navigator.keyboard.lock();
+                    lockStatus.innerText = "🔒 キーボードロック有効！";
+                    lockStatus.className = "text-xs text-green-400 font-bold animate-pulse";
+                    console.log("Keyboard lock success!");
+                } catch (error) {
+                    lockStatus.innerText = "⚠️ ロック不可 (ブラウザ未対応)";
+                    lockStatus.className = "text-xs text-rose-400";
+                    console.warn("Keyboard lock failed:", error);
+                }
+            } else {
+                lockStatus.innerText = "⚠️ ロック不可 (ブラウザ未対応)";
+                lockStatus.className = "text-xs text-slate-400";
+            }
+        }
+
+        // キーボードロックの解除
+        function releaseKeyboardLock() {
+            if (navigator.keyboard && typeof navigator.keyboard.unlock === 'function') {
+                navigator.keyboard.unlock();
+                lockStatus.innerText = "非ロック状態";
+                lockStatus.className = "text-xs text-slate-400";
+            }
+        }
+
+        // フルスクリーン & キーボードロックの切り替え
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen()
+                    .then(() => {
+                        fullscreenBtn.innerText = "🖥 フルスクリーン解除 ＆ ロックオフ";
+                        requestKeyboardLock();
+                    })
+                    .catch(err => {
+                        console.log(`Error: ${err.message}`);
+                    });
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        // 画面のフルスクリーン状態の変化を監視してロックのオン・オフを追従
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                fullscreenBtn.innerText = "🖥 フルスクリーン ＆ キーボードロック開始";
+                releaseKeyboardLock();
+            }
+        });
+    </script>
+</body>
+</html>
