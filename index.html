@@ -2,12 +2,19 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>あかちゃん キーボードあそび ★ Baby Toy</title>
+    
+    <!-- PWA / モバイル完全フルスクリーン用の設定（ホーム画面追加時にアプリ化） -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="にこにこキーボード">
+
     <!-- Tailwind CSS for modern layout styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* タブレットでのスワイプや長押しによるブラウザ動作（スクロール、ズーム、コンテキストメニュー）を完全に無効化 */
+        /* タブレットでのスワイプや長押しによるブラウザ動作を完全に無効化 */
         body, html, canvas {
             margin: 0;
             padding: 0;
@@ -19,6 +26,13 @@
             touch-action: none;
             background-color: #0b0f19;
         }
+        /* セーフエリア（iPhoneのノッチやホームインジケーター）に対応 */
+        .safe-padding {
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+        }
         /* ふわっと消えるメッセージのアニメーション */
         @keyframes pulse-slow {
             0%, 100% { opacity: 0.3; transform: scale(1); }
@@ -29,9 +43,9 @@
         }
     </style>
 </head>
-<body class="relative font-sans text-white select-none">
+<body class="relative font-sans text-white select-none overflow-hidden">
 
-    <!-- 1. スタート画面（ブラウザのサウンド再生制限を解除するために必要） -->
+    <!-- 1. スタート画面（音響とフルスクリーン権限を同時に取得する超重要画面） -->
     <div id="start-screen" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-900 transition-opacity duration-500 cursor-pointer text-center p-6">
         <div class="space-y-6 max-w-md">
             <div class="text-8xl animate-bounce">🎨🐶🌈</div>
@@ -42,11 +56,11 @@
                 たたく！なぞる！<br>
                 きれいな音、お顔、シャボン玉が出るよ！
             </p>
-            <button class="px-10 py-5 bg-gradient-to-r from-pink-500 via-amber-400 to-emerald-400 rounded-full text-2xl font-black text-white shadow-2xl hover:scale-105 active:scale-95 transition-all animate-pulse duration-700">
+            <button id="real-start-btn" class="px-10 py-5 bg-gradient-to-r from-pink-500 via-amber-400 to-emerald-400 rounded-full text-2xl font-black text-white shadow-2xl hover:scale-105 active:scale-95 transition-all animate-pulse duration-700">
                 あそびをはじめる 🌟
             </button>
             <div class="text-xs text-slate-500 pt-4">
-                ※音が出ます。1才〜3才のお子様に最適なやさしい音色です。
+                ※タップすると自動的に全画面（フルスクリーン）になります
             </div>
         </div>
     </div>
@@ -54,9 +68,9 @@
     <!-- 2. メインの描画キャンバス -->
     <canvas id="canvas" class="block w-full h-full"></canvas>
 
-    <!-- 3. 保護者向けコントロール＆簡易切り替え -->
-    <div class="absolute top-4 left-4 right-4 z-40 flex justify-between items-center pointer-events-none">
-        <!-- 簡易モード切り替え（赤ちゃんが触っても楽しいお花の形デザイン） -->
+    <!-- 3. 保護者向けコントロール＆簡易切り替え（セーフエリア対応） -->
+    <div class="absolute top-4 left-4 right-4 z-40 flex justify-between items-center pointer-events-none safe-padding">
+        <!-- 簡易モード切り替え -->
         <div class="flex gap-2 pointer-events-auto">
             <button id="quick-mode-btn" class="px-4 py-2 bg-pink-500 hover:bg-pink-400 text-white font-bold rounded-full text-xs shadow-lg active:scale-95 transition-all border border-pink-300 flex items-center gap-1">
                 <span>🎨 ぬりかえ:</span>
@@ -108,7 +122,7 @@
                         <span id="lock-status" class="text-xs text-amber-400">非ロック状態</span>
                     </label>
                     <button id="fullscreen-btn" class="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg text-sm">
-                        <span>🖥 フルスクリーン ＆ キーボードロック開始</span>
+                        <span>🖥 フルスクリーン手動切替 / ロック開始</span>
                     </button>
                 </div>
                 
@@ -124,17 +138,16 @@
                 <!-- 大人向け：物理キーボード完全ロックのアドバイス -->
                 <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700/50 space-y-2">
                     <h3 class="text-xs font-bold text-amber-400 flex items-center gap-1">
-                        <span>🔒 完全に誤操作を防ぐ（PC/スマホ設定のコツ）</span>
+                        <span>👑 iPad / iPhone で「完全全画面」にする極意</span>
                     </h3>
                     <div class="text-[11px] text-slate-300 space-y-1.5 leading-relaxed">
-                        <p><strong>Windows：</strong></p>
-                        <ul class="list-disc pl-4 space-y-0.5 text-slate-400">
-                            <li><strong>Shiftキーを5回連打して設定を開き、ショートカットを無効化</strong>すると「固定キー機能」の暴発を防げます。</li>
-                        </ul>
-                        <p class="mt-1"><strong>Mac / iPad / iPhone：</strong></p>
-                        <ul class="list-disc pl-4 space-y-0.5 text-slate-400">
-                            <li>OS標準の<strong>「アクセスガイド」</strong>（設定➔アクセシビリティ）をトリプルクリックで開始すると、ホームボタンや電源ボタンが無効化され、安全なゲーム機に変わります！</li>
-                        </ul>
+                        <p class="text-pink-300 font-bold">💡 Safariの「ホーム画面に追加」を強くおすすめします：</p>
+                        <ol class="list-decimal pl-4 space-y-1 text-slate-400">
+                            <li>このページをSafariで開きます。</li>
+                            <li>画面下部（または上部）の <strong>「共有（四角に↑のアイコン）」</strong> ボタンをタップします。</li>
+                            <li>メニューから <strong>「ホーム画面に追加」</strong> を選びます。</li>
+                            <li>ホーム画面にできたアイコンから起動すると、<strong>アドレスバーや戻るボタン、iOSの操作バーが100%消失した完全無欠の全画面おもちゃ</strong>として起動します！</li>
+                        </ol>
                     </div>
                 </div>
             </div>
@@ -161,36 +174,38 @@
         const ctx = canvas.getContext('2d');
         
         let audioCtx = null;
-        let mainVolume = 0.16; // 幼児の耳に優しい初期ボリューム
-        let playMode = 'classic'; // 'classic' | 'animals' | 'bubbles'
+        let mainVolume = 0.16; 
+        let playMode = 'classic'; 
 
-        // 画面のフルリサイズ追従
+        // 画面のフルリサイズ追従（iOS特有のアドレスバー伸縮バグ対策）
         function resizeCanvas() {
             canvas.width = window.innerWidth * window.devicePixelRatio;
             canvas.height = window.innerHeight * window.devicePixelRatio;
             ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
         }
-        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('resize', () => {
+            setTimeout(resizeCanvas, 100); // 描画タイミングのズレを防ぐバッファ
+        });
+        window.addEventListener('orientationchange', () => {
+            setTimeout(resizeCanvas, 200);
+        });
         resizeCanvas();
 
-        // 鮮やかなカラーパレット（より明るく、パステルに近い幼児向けの配色にブラッシュアップ）
         const COLORS = [
             '#FF6B6B', '#FF8E53', '#FFD200', '#4EFE80', '#00D2FC', 
             '#A55EEA', '#FF5E97', '#00FCD2', '#FF85A2', '#C4FB3D'
         ];
 
-        // 各モード対応の絵文字リスト
         const EMOJIS = {
             classic: ["★", "♥", "♪", "☀", "☁", "❄", "🍀", "🎈", "🌟", "🍒", "🍩"],
             animals: ["🐱", "🐶", "🐻", "🐰", "🦁", "🐸", "🐵", "🐤", "🐼", "🚗", "✈", "🚀", "🛸", "🚒", "🍎", "🍌", "🍓", "🍉"],
             bubbles: ["🫧"]
         };
 
-        // 心地よい五音音階（ペンタトニックスケール：適当に弾いても絶対に不協和音にならない、和風・アジアの優しい癒やし音階）
         const SCALE = [
-            261.63, 293.66, 329.63, 392.00, 440.00, // C4, D4, E4, G4, A4
-            523.25, 587.33, 659.25, 783.99, 880.00, // C5, D5, E5, G5, A5
-            1046.50, 1174.66, 1318.51, 1567.98, 1760.00 // C6, D6, E6, G6, A6
+            261.63, 293.66, 329.63, 392.00, 440.00, 
+            523.25, 587.33, 659.25, 783.99, 880.00, 
+            1046.50, 1174.66, 1318.51, 1567.98, 1760.00 
         ];
 
         // --- 2. シンセサイザー音源エンジン（Web Audio API） ---
@@ -203,26 +218,20 @@
             }
         }
 
-        // 音声を再生（ピッチ、および現在のモードに基づく効果音）
         function playSound(pitchIndex) {
             if (!audioCtx) return;
             initAudio();
-
             const baseFreq = SCALE[pitchIndex % SCALE.length];
 
             if (playMode === 'bubbles') {
-                // シャボン玉の「ポコッ！」という破裂音シンセ
                 playBubbleSound();
             } else if (playMode === 'animals') {
-                // どうぶつ：ピョーン！というピッチが変化するコミカルな音
                 playBoingSound(baseFreq);
             } else {
-                // 通常：キラキラした温かいサイン・三角和音
                 playWarmTone(baseFreq);
             }
         }
 
-        // 1. オルゴール風のあたたかい音
         function playWarmTone(frequency) {
             const osc = audioCtx.createOscillator();
             const osc2 = audioCtx.createOscillator();
@@ -231,13 +240,12 @@
             osc.type = 'triangle';
             osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
 
-            // ちょっとオクターブ上の倍音を重ねてキラキラ感を付与
             osc2.type = 'sine';
             osc2.frequency.setValueAtTime(frequency * 2, audioCtx.currentTime);
 
             gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
             gainNode.gain.linearRampToValueAtTime(0.4 * mainVolume, audioCtx.currentTime + 0.02);
-            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.2); // 長めのエコー
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.2);
 
             osc.connect(gainNode);
             osc2.connect(gainNode);
@@ -249,13 +257,11 @@
             osc2.stop(audioCtx.currentTime + 1.2);
         }
 
-        // 2. コミカルな「ぽよん」音（周波数の高速スライド）
         function playBoingSound(frequency) {
             const osc = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
 
             osc.type = 'sine';
-            // 低いピッチから一気にスライドアップして「ぽよん」を作る
             osc.frequency.setValueAtTime(frequency * 0.4, audioCtx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(frequency * 1.3, audioCtx.currentTime + 0.15);
             osc.frequency.exponentialRampToValueAtTime(frequency, audioCtx.currentTime + 0.3);
@@ -271,13 +277,11 @@
             osc.stop(audioCtx.currentTime + 0.6);
         }
 
-        // 3. シャボン玉が弾ける「ポコッ」という短い音
         function playBubbleSound() {
             const osc = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
 
             osc.type = 'sine';
-            // 超高速のピッチスライドダウンで叩き・破裂感を演出
             const randomPitch = 400 + Math.random() * 300;
             osc.frequency.setValueAtTime(randomPitch, audioCtx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(60, audioCtx.currentTime + 0.05);
@@ -292,7 +296,7 @@
             osc.stop(audioCtx.currentTime + 0.08);
         }
 
-        // --- 3. パーティクルシステム（お顔、シャボン玉、スペシャル） ---
+        // --- 3. パーティクルシステム ---
         const particles = [];
         let flashColor = null;
         let flashOpacity = 0;
@@ -303,38 +307,32 @@
                 this.y = y;
                 this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
                 
-                // スペシャルな大きなキャラ、ドラッグ時の小さな軌跡、通常の図形
                 if (isSpecial) {
-                    this.size = Math.floor(Math.random() * 80) + 100; // 超巨大！
+                    this.size = Math.floor(Math.random() * 80) + 100;
                     this.shape = "special";
                 } else if (dragSpawn) {
-                    this.size = Math.floor(Math.random() * 15) + 15;  // 控えめ
+                    this.size = Math.floor(Math.random() * 15) + 15;
                     this.shape = "text";
                 } else {
-                    this.size = Math.floor(Math.random() * 55) + 40;  // 通常
+                    this.size = Math.floor(Math.random() * 55) + 40;
                     const defaultShapes = ["circle", "square", "star", "text"];
                     this.shape = defaultShapes[Math.floor(Math.random() * defaultShapes.length)];
                 }
 
-                // モードに応じて中身の絵文字をセット
                 const currentEmojiPool = EMOJIS[playMode];
                 this.char = currentEmojiPool[Math.floor(Math.random() * currentEmojiPool.length)];
 
-                // シャボン玉モードの場合は全員円・丸ベースになる
                 if (playMode === 'bubbles' && !isSpecial) {
-                    this.shape = Math.random() < 0.4 ? "bubble" : "text"; // 泡か文字
+                    this.shape = Math.random() < 0.4 ? "bubble" : "text";
                     this.char = "🫧";
                 }
 
-                // 物理パラメーター
                 if (playMode === 'bubbles') {
-                    // シャボン玉はふわふわと上に登っていく
                     this.vx = Math.random() * 3 - 1.5;
                     this.vy = -(Math.random() * 2 + 1);
-                    this.gravity = -0.02; // 逆重力
-                    this.decay = Math.random() * 0.005 + 0.004; // 長生きする
+                    this.gravity = -0.02;
+                    this.decay = Math.random() * 0.005 + 0.004;
                 } else {
-                    // 通常と動物：上向きに飛び出す
                     const angle = Math.random() * (Math.PI * 0.6) - (Math.PI * 0.8);
                     const speed = isSpecial ? (Math.random() * 4 + 4) : (Math.random() * 10 + 6);
                     this.vx = Math.cos(angle) * speed;
@@ -346,7 +344,7 @@
                 this.rotation = 0;
                 this.rotSpeed = Math.random() * 6 - 3;
                 this.alpha = 1;
-                this.wiggleOffset = Math.random() * 100; // シャボン玉などの揺らぎ用
+                this.wiggleOffset = Math.random() * 100;
             }
 
             update() {
@@ -356,7 +354,6 @@
                 this.rotation += this.rotSpeed;
                 this.alpha -= this.decay;
 
-                // シャボン玉は浮遊中に左右にやさしく揺れる
                 if (playMode === 'bubbles') {
                     this.x += Math.sin((Date.now() / 200) + this.wiggleOffset) * 0.5;
                 }
@@ -376,7 +373,6 @@
                 const r = this.size / 2;
 
                 if (this.shape === "circle") {
-                    // 【1〜3才特化】可愛い「お顔」が描かれた笑顔サークル！
                     ctx.beginPath();
                     ctx.arc(0, 0, r, 0, Math.PI * 2);
                     ctx.fill();
@@ -403,12 +399,10 @@
                     ctx.stroke();
 
                 } else if (this.shape === "square") {
-                    // 可愛いお顔の角丸しかく
                     ctx.beginPath();
                     ctx.roundRect(-r, -r, this.size, this.size, r * 0.3);
                     ctx.fill();
 
-                    // しかくのおめめとおくち
                     ctx.fillStyle = '#1e293b';
                     ctx.beginPath();
                     ctx.arc(-r * 0.3, -r * 0.1, r * 0.1, 0, Math.PI * 2);
@@ -431,7 +425,6 @@
                     ctx.closePath();
                     ctx.fill();
 
-                    // 星にも小さなおめめ
                     ctx.fillStyle = '#1e293b';
                     ctx.beginPath();
                     ctx.arc(-r * 0.2, 0, r * 0.08, 0, Math.PI * 2);
@@ -439,14 +432,12 @@
                     ctx.fill();
 
                 } else if (this.shape === "bubble") {
-                    // リアルでプルンプルンに揺れるシャボン玉
                     ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
                     ctx.lineWidth = 2;
                     ctx.beginPath();
                     ctx.arc(0, 0, r, 0, Math.PI * 2);
                     ctx.stroke();
 
-                    // ハイライト（立体的に見せる白い光沢）
                     ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
                     ctx.beginPath();
                     ctx.arc(-r * 0.4, -r * 0.4, r * 0.25, 0, Math.PI * 2);
@@ -459,16 +450,14 @@
                     ctx.fillText(this.char, 0, 0);
 
                 } else if (this.shape === "special") {
-                    // スペシャルデカキャラ（お日様風、にこにこスマイル）
                     ctx.strokeStyle = this.color;
                     ctx.lineWidth = 10;
                     ctx.beginPath();
                     ctx.arc(0, 0, r * 0.8, 0, Math.PI * 2);
                     ctx.stroke();
-                    ctx.fillStyle = '#FFD200'; // きいろ
+                    ctx.fillStyle = '#FFD200';
                     ctx.fill();
 
-                    // ひかりのトゲトゲ
                     for (let i = 0; i < 12; i++) {
                         const angle = (i * Math.PI / 6);
                         ctx.strokeStyle = '#FF8E53';
@@ -479,7 +468,6 @@
                         ctx.stroke();
                     }
 
-                    // でっかいおめめとおくち
                     ctx.fillStyle = '#1e293b';
                     ctx.beginPath();
                     ctx.arc(-r * 0.25, -r * 0.1, r * 0.12, 0, Math.PI * 2);
@@ -499,31 +487,25 @@
 
         // --- 4. インタラクションハンドラ ---
 
-        // キーや画面タップ時に盛大に噴射
         function triggerResponse(x, y, customChar = null) {
             flashColor = COLORS[Math.floor(Math.random() * COLORS.length)];
-            flashOpacity = 0.28; // フラッシュの眩しさを赤ちゃんの目にやさしく調整
+            flashOpacity = 0.28;
 
-            // ピッチとサウンド再生
             const pitchIndex = Math.floor((x / window.innerWidth) * SCALE.length);
             playSound(pitchIndex);
 
-            // 1) 通常パーティクルを複数発生
-            const count = Math.floor(Math.random() * 8) + 12; // 12〜20個
+            const count = Math.floor(Math.random() * 8) + 12; 
             for (let i = 0; i < count; i++) {
                 particles.push(new Particle(x, y, false, false));
             }
 
-            // 2) 珍しい確率（約10%）で、超特大の「にこにこお日様（スペシャル）」を出現
             if (Math.random() < 0.12 && playMode !== 'bubbles') {
                 particles.push(new Particle(x, y, true, false));
             }
 
-            // ガイドテキストを徐々に透明にする
             document.getElementById('guide-text').style.opacity = '0.05';
         }
 
-        // 【新機能】ドラッグ（おててでなぞる）だけで描ける魔法の虹色 trail
         let lastDragX = 0;
         let lastDragY = 0;
         let isDragging = false;
@@ -532,30 +514,26 @@
             if (!isDragging) return;
 
             const dist = Math.hypot(x - lastDragX, y - lastDragY);
-            if (dist > 25) { // 25ピクセル移動するごとに綺麗な星/泡が尾を引く
+            if (dist > 25) { 
                 lastDragX = x;
                 lastDragY = y;
 
-                // なぞる速さに合わせたピッチ（画面のX座標に比例）
                 const pitchIndex = Math.floor((x / window.innerWidth) * SCALE.length);
                 playSound(pitchIndex);
-
-                // 単発の軌跡パーティクルを生成
                 particles.push(new Particle(x, y, false, true));
             }
         }
 
-        // キーボード入力（何が押されてもOK！）
+        // キーボードブロック
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') return;
             e.preventDefault();
 
             let keyStr = e.key;
             if (keyStr.length > 1) {
-                keyStr = null; // ShiftやEnterなどは可愛い絵文字に任せる
+                keyStr = null; 
             }
 
-            // 画面の中央周辺から噴き出す
             const rx = Math.random() * (window.innerWidth - 200) + 100;
             const ry = Math.random() * (window.innerHeight - 300) + 150;
 
@@ -565,7 +543,7 @@
         window.addEventListener('keypress', (e) => { if (e.key !== 'Escape') e.preventDefault(); }, { passive: false });
         window.addEventListener('keyup', (e) => { if (e.key !== 'Escape') e.preventDefault(); }, { passive: false });
 
-        // マウスによる「なぞり（ドラッグ）」
+        // マウス
         window.addEventListener('mousedown', (e) => {
             if (e.target.closest('#menu-btn') || e.target.closest('#settings-modal') || e.target.closest('#start-screen') || e.target.closest('#quick-mode-btn')) return;
             isDragging = true;
@@ -580,7 +558,7 @@
 
         window.addEventListener('mouseup', () => { isDragging = false; });
 
-        // スマートフォンやiPadでの「なぞり（スワイプ）」マルチタッチ
+        // モバイル（マルチタッチ）
         window.addEventListener('touchstart', (e) => {
             if (e.target.closest('#menu-btn') || e.target.closest('#settings-modal') || e.target.closest('#start-screen') || e.target.closest('#quick-mode-btn')) return;
             
@@ -603,39 +581,31 @@
         window.addEventListener('touchend', () => { isDragging = false; });
 
         // --- 5. メインアニメーションループ ---
-        
-        // 【シャボン玉モード用】キーボードや指に頼らず、時々ゆっくり自動で下からシャボン玉を浮かび上がらせる
         let lastBubbleSpawn = 0;
 
         function loop() {
-            // 背景を描画
             ctx.fillStyle = '#0b0f19';
             ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
 
-            // 背景のフラッシュ残像
             if (flashOpacity > 0) {
                 ctx.fillStyle = flashColor;
                 ctx.globalAlpha = flashOpacity;
                 ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
                 ctx.globalAlpha = 1;
-                flashOpacity -= 0.02; // やさしくゆっくり減退
+                flashOpacity -= 0.02; 
             }
 
-            // シャボン玉モード中の自動湧き出し
             if (playMode === 'bubbles' && Date.now() - lastBubbleSpawn > 350) {
                 lastBubbleSpawn = Date.now();
-                // 画面下のランダムな場所からそっと生成
                 const bx = Math.random() * window.innerWidth;
                 particles.push(new Particle(bx, window.innerHeight + 50));
             }
 
-            // パーティクルの更新と描画
             for (let i = particles.length - 1; i >= 0; i--) {
                 const p = particles[i];
                 p.update();
                 p.draw();
 
-                // 画面上部（シャボン玉）または画面下部（他モード）へ流出した場合は削除
                 if (p.alpha <= 0 || p.y > window.innerHeight + 150 || p.y < -150) {
                     particles.splice(i, 1);
                 }
@@ -644,7 +614,7 @@
             requestAnimationFrame(loop);
         }
 
-        // --- 6. システム・UI制御＆ロック機能 ---
+        // --- 6. システム・UI制御＆完全フルスクリーン化ロジック ---
 
         const startScreen = document.getElementById('start-screen');
         const menuBtn = document.getElementById('menu-btn');
@@ -658,15 +628,54 @@
         const quickModeBtn = document.getElementById('quick-mode-btn');
         const currentModeLabel = document.getElementById('current-mode-label');
 
-        // スタート
+        // デバイスの各フルスクリーンAPIをクロスプラットフォームで取得する
+        function toggleFullscreen() {
+            const docEl = document.documentElement;
+            const requestFS = docEl.requestFullscreen 
+                            || docEl.webkitRequestFullscreen 
+                            || docEl.mozRequestFullScreen 
+                            || docEl.msRequestFullscreen;
+                            
+            const exitFS = document.exitFullscreen 
+                        || document.webkitExitFullscreen 
+                        || document.mozCancelFullScreen 
+                        || document.msExitFullscreen;
+
+            const isFS = document.fullscreenElement 
+                      || document.webkitFullscreenElement 
+                      || document.mozFullScreenElement 
+                      || document.msFullscreenElement;
+
+            if (!isFS) {
+                if (requestFS) {
+                    requestFS.call(docEl)
+                        .then(() => {
+                            requestKeyboardLock();
+                        })
+                        .catch(err => {
+                            console.log(`Fullscreen error: ${err.message}`);
+                        });
+                }
+            } else {
+                if (exitFS) {
+                    exitFS.call(document);
+                }
+            }
+        }
+
+        // スタートボタンタップ時：音声を有効化し、同時に「完全フルスクリーン」を要求
         startScreen.addEventListener('click', () => {
             initAudio();
+            
+            // 全画面化を試みる (iOSを含むほとんどのモバイル＆PCブラウザに対応)
+            toggleFullscreen();
+
             startScreen.classList.add('opacity-0');
             setTimeout(() => {
                 startScreen.style.display = 'none';
+                resizeCanvas(); // フルスクリーン移行後のリサイズ保証
             }, 500);
             
-            // 起動時のウエルカム音階
             playSound(4);
             setTimeout(() => playSound(7), 150);
             loop();
@@ -679,7 +688,7 @@
             pressTimer = setTimeout(() => {
                 settingsModal.classList.remove('hidden');
                 menuBtn.classList.remove('scale-95', 'bg-amber-600/90');
-            }, 2000); // 2秒
+            }, 2000); 
         }
 
         function cancelPress() {
@@ -708,8 +717,6 @@
         // テーマモード設定のロジック
         function updatePlayMode(mode) {
             playMode = mode;
-            
-            // 各種UIの文字更新
             const labels = {
                 classic: 'にこにこスター',
                 animals: 'どうぶつサファリ',
@@ -717,7 +724,6 @@
             };
             currentModeLabel.innerText = labels[mode] || 'にこにこスター';
 
-            // 設定画面内のボタンのアクティブ・非アクティブ視覚調整
             document.querySelectorAll('.mode-select-btn').forEach(btn => {
                 if (btn.getAttribute('data-mode') === mode) {
                     btn.classList.add('bg-pink-600');
@@ -731,7 +737,6 @@
             });
         }
 
-        // 設定画面内のモード切替
         document.querySelectorAll('.mode-select-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const targetMode = btn.getAttribute('data-mode');
@@ -740,7 +745,6 @@
             });
         });
 
-        // 【超便利】画面左上のボタンでお花のように素早くモード切り替えができる
         quickModeBtn.addEventListener('click', () => {
             const modeOrder = ['classic', 'animals', 'bubbles'];
             let nextIndex = (modeOrder.indexOf(playMode) + 1) % modeOrder.length;
@@ -756,7 +760,7 @@
                     lockStatus.innerText = "🔒 キーボードロック有効！";
                     lockStatus.className = "text-xs text-green-400 font-bold animate-pulse";
                 } catch (error) {
-                    lockStatus.innerText = "⚠️ ロック不可 (ブラウザ未対応)";
+                    lockStatus.innerText = "⚠️ フルスクリーン中のみ有効";
                     lockStatus.className = "text-xs text-rose-400";
                 }
             } else {
@@ -773,28 +777,30 @@
             }
         }
 
-        // フルスクリーン & キーボードロック
-        fullscreenBtn.addEventListener('click', () => {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen()
-                    .then(() => {
-                        fullscreenBtn.innerText = "🖥 フルスクリーン解除 ＆ ロックオフ";
-                        requestKeyboardLock();
-                    })
-                    .catch(err => {
-                        console.log(`Error: ${err.message}`);
-                    });
-            } else {
-                document.exitFullscreen();
-            }
-        });
+        // フルスクリーン & キーボードロック ボタンクリック時
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
 
-        document.addEventListener('fullscreenchange', () => {
-            if (!document.fullscreenElement) {
+        // フルスクリーン状態の変化を追従
+        const handleFullscreenChange = () => {
+            const isFS = document.fullscreenElement 
+                      || document.webkitFullscreenElement 
+                      || document.mozFullScreenElement 
+                      || document.msFullscreenElement;
+
+            if (isFS) {
+                fullscreenBtn.innerText = "🖥 フルスクリーン解除 ＆ ロックオフ";
+                requestKeyboardLock();
+            } else {
                 fullscreenBtn.innerText = "🖥 フルスクリーン ＆ キーボードロック開始";
                 releaseKeyboardLock();
             }
-        });
+            setTimeout(resizeCanvas, 150); // サイズ再調整
+        };
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
     </script>
 </body>
 </html>
