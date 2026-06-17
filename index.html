@@ -17,7 +17,7 @@
             user-select: none;
             -webkit-user-select: none;
             touch-action: none;
-            background-color: #0f172a;
+            background-color: #0b0f19;
         }
         /* ふわっと消えるメッセージのアニメーション */
         @keyframes pulse-slow {
@@ -29,24 +29,24 @@
         }
     </style>
 </head>
-<body class="relative font-sans text-white">
+<body class="relative font-sans text-white select-none">
 
     <!-- 1. スタート画面（ブラウザのサウンド再生制限を解除するために必要） -->
     <div id="start-screen" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-900 transition-opacity duration-500 cursor-pointer text-center p-6">
         <div class="space-y-6 max-w-md">
-            <div class="text-7xl animate-bounce">🎹🌟👶</div>
-            <h1 class="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-amber-300 to-cyan-400">
-                あかちゃんキーボード
+            <div class="text-8xl animate-bounce">🎨🐶🌈</div>
+            <h1 class="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-yellow-300 to-cyan-400 drop-shadow-lg">
+                にこにこキーボード
             </h1>
-            <p class="text-sm text-slate-400">
-                キーボードのキーをたたいたり、<br>
-                がめんをタッチすると、きれいな音と図形が出ます！
+            <p class="text-base text-slate-300 font-bold">
+                たたく！なぞる！<br>
+                きれいな音、お顔、シャボン玉が出るよ！
             </p>
-            <button class="px-8 py-4 bg-gradient-to-r from-pink-500 to-yellow-500 rounded-full text-xl font-bold text-white shadow-lg hover:scale-105 active:scale-95 transition-all animate-pulse duration-1000">
-                あそぶ（スタート！）
+            <button class="px-10 py-5 bg-gradient-to-r from-pink-500 via-amber-400 to-emerald-400 rounded-full text-2xl font-black text-white shadow-2xl hover:scale-105 active:scale-95 transition-all animate-pulse duration-700">
+                あそびをはじめる 🌟
             </button>
             <div class="text-xs text-slate-500 pt-4">
-                ※音が出ますのでボリュームにご注意ください
+                ※音が出ます。1才〜3才のお子様に最適なやさしい音色です。
             </div>
         </div>
     </div>
@@ -54,55 +54,71 @@
     <!-- 2. メインの描画キャンバス -->
     <canvas id="canvas" class="block w-full h-full"></canvas>
 
-    <!-- 3. 保護者向けコントロール（誤操作防止：長押しで解除） -->
-    <div class="absolute top-4 right-4 z-40 flex items-center gap-2">
-        <!-- 長押しボタン -->
-        <button id="menu-btn" class="px-4 py-2 bg-slate-800/80 border border-slate-700/50 hover:bg-slate-700 backdrop-blur-md rounded-full text-xs text-slate-300 transition-all active:scale-95 flex items-center gap-1.5 shadow-md">
+    <!-- 3. 保護者向けコントロール＆簡易切り替え -->
+    <div class="absolute top-4 left-4 right-4 z-40 flex justify-between items-center pointer-events-none">
+        <!-- 簡易モード切り替え（赤ちゃんが触っても楽しいお花の形デザイン） -->
+        <div class="flex gap-2 pointer-events-auto">
+            <button id="quick-mode-btn" class="px-4 py-2 bg-pink-500 hover:bg-pink-400 text-white font-bold rounded-full text-xs shadow-lg active:scale-95 transition-all border border-pink-300 flex items-center gap-1">
+                <span>🎨 ぬりかえ:</span>
+                <span id="current-mode-label">にこにこスター</span>
+            </button>
+        </div>
+
+        <!-- 保護者設定ボタン（誤操作防止：長押しで解除） -->
+        <button id="menu-btn" class="pointer-events-auto px-4 py-2 bg-slate-800/90 border border-slate-700/50 hover:bg-slate-700 backdrop-blur-md rounded-full text-xs text-slate-300 transition-all active:scale-95 flex items-center gap-1.5 shadow-md">
             <span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
-            <span>設定 (長押し 2秒)</span>
+            <span>パパママ設定 (長押し2秒)</span>
         </button>
     </div>
 
-    <!-- 4. 設定用ポップアップモーダル（スクロール可能にしてガイドを追加） -->
+    <!-- 4. 設定用ポップアップモーダル -->
     <div id="settings-modal" class="hidden absolute inset-0 z-40 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
         <div class="bg-slate-800 border border-slate-700 p-6 rounded-3xl max-w-md w-full space-y-6 shadow-2xl my-8">
             <div class="flex justify-between items-center border-b border-slate-700 pb-3">
                 <h2 class="text-lg font-bold flex items-center gap-2 text-amber-400">
-                    🛠 保護者メニュー ＆ ロック設定
+                    🛠 パパママ設定 ＆ ロックメニュー
                 </h2>
                 <button id="close-settings" class="text-slate-400 hover:text-white text-xl">✕</button>
             </div>
             
             <div class="space-y-4">
+                <!-- モードセレクト -->
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1.5 font-bold">✨ お子様の興味に合わせるモード設定</label>
+                    <div class="grid grid-cols-1 gap-2">
+                        <button class="mode-select-btn py-2.5 px-4 bg-pink-600 rounded-xl text-left text-sm font-bold flex items-center justify-between" data-mode="classic">
+                            <span>🌟 にこにこスター (可愛い顔の図形が飛び出す)</span>
+                            <span class="mode-check">✔</span>
+                        </button>
+                        <button class="mode-select-btn py-2.5 px-4 bg-slate-700 rounded-xl text-left text-sm font-bold flex items-center justify-between" data-mode="animals">
+                            <span>🦁 どうぶつとのりもの (コミカルなジャンプ音！)</span>
+                            <span class="mode-check hidden">✔</span>
+                        </button>
+                        <button class="mode-select-btn py-2.5 px-4 bg-slate-700 rounded-xl text-left text-sm font-bold flex items-center justify-between" data-mode="bubbles">
+                            <span>🫧 シャボン玉ポコポコ (泡がふわふわ浮いて割れる)</span>
+                            <span class="mode-check hidden">✔</span>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- フルスクリーン＆キーボードロックのステータス -->
                 <div>
-                    <label class="block text-sm text-slate-400 mb-1.5 flex justify-between">
+                    <label class="block text-sm text-slate-400 mb-1.5 flex justify-between font-bold">
                         <span>画面表示・誤入力ガード</span>
                         <span id="lock-status" class="text-xs text-amber-400">非ロック状態</span>
                     </label>
-                    <button id="fullscreen-btn" class="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg">
+                    <button id="fullscreen-btn" class="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg text-sm">
                         <span>🖥 フルスクリーン ＆ キーボードロック開始</span>
                     </button>
-                    <p class="text-[10px] text-slate-400 mt-1">※フルスクリーン中のみ、特殊キー（TabやAlt等）の無効化ロックが作動します。</p>
                 </div>
                 
                 <!-- 音量調節 -->
                 <div>
-                    <div class="flex justify-between text-sm text-slate-400 mb-1">
+                    <div class="flex justify-between text-sm text-slate-400 mb-1 font-bold">
                         <span>音量 (Volume)</span>
-                        <span id="volume-val">50%</span>
+                        <span id="volume-val">40%</span>
                     </div>
-                    <input type="range" id="volume-slider" min="0" max="100" value="50" class="w-full accent-pink-500 bg-slate-700 rounded-lg appearance-none h-2 cursor-pointer">
-                </div>
-
-                <!-- 音色セレクト -->
-                <div>
-                    <label class="block text-sm text-slate-400 mb-1.5">音の種類 (Synth Type)</label>
-                    <select id="synth-type" class="w-full bg-slate-700 border border-slate-600 text-white rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-pink-500">
-                        <option value="sine">🔮 オルゴール (サイン波)</option>
-                        <option value="triangle">🧸 やさしいピコピコ (三角波)</option>
-                        <option value="sine-chord">✨ キラキラ・和音</option>
-                    </select>
+                    <input type="range" id="volume-slider" min="0" max="100" value="40" class="w-full accent-pink-500 bg-slate-700 rounded-lg appearance-none h-2 cursor-pointer">
                 </div>
 
                 <!-- 大人向け：物理キーボード完全ロックのアドバイス -->
@@ -113,12 +129,11 @@
                     <div class="text-[11px] text-slate-300 space-y-1.5 leading-relaxed">
                         <p><strong>Windows：</strong></p>
                         <ul class="list-disc pl-4 space-y-0.5 text-slate-400">
-                            <li>「固定キー機能」のポップアップを防ぐため、<strong>Shiftキーを5回連打して設定を開き、ショートカットキーを無効化</strong>しておくと安心です。</li>
-                            <li>「アクセスガイド（キオスクモード）」を使うと、特定のブラウザ以外の操作を完全にロックできます。</li>
+                            <li><strong>Shiftキーを5回連打して設定を開き、ショートカットを無効化</strong>すると「固定キー機能」の暴発を防げます。</li>
                         </ul>
                         <p class="mt-1"><strong>Mac / iPad / iPhone：</strong></p>
                         <ul class="list-disc pl-4 space-y-0.5 text-slate-400">
-                            <li>OS標準の<strong>「アクセスガイド」</strong>（設定 ➔ アクセシビリティ）をONにし、トリプルクリックで開始すると、ホームボタンや電源ボタンを含めて物理的に画面内だけにロックできます。</li>
+                            <li>OS標準の<strong>「アクセスガイド」</strong>（設定➔アクセシビリティ）をトリプルクリックで開始すると、ホームボタンや電源ボタンが無効化され、安全なゲーム機に変わります！</li>
                         </ul>
                     </div>
                 </div>
@@ -126,7 +141,7 @@
 
             <div class="border-t border-slate-700 pt-4 text-center">
                 <p class="text-[11px] text-slate-500 leading-relaxed">
-                    赤ちゃんが誤ってボタンを押さないように、元の画面に戻るには右上のボタンを長押しする必要があります。
+                    戻るには、右上の「設定」ボタンをもう一度長押し（2秒）してください。
                 </p>
                 <button id="resume-btn" class="mt-4 w-full py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-sm font-semibold transition-all">
                     あそびにもどる
@@ -137,7 +152,7 @@
 
     <!-- 5. 画面中央のふわっとしたガイド表示 -->
     <div id="guide-text" class="absolute bottom-10 left-1/2 -translate-x-1/2 pointer-events-none text-center select-none animate-pulse-slow">
-        <p class="text-sm md:text-base text-slate-500 font-medium">キーボードを叩くか、画面をタッチしてね！ 🎹🌟</p>
+        <p class="text-sm md:text-base text-slate-400 font-bold bg-slate-950/40 px-4 py-2 rounded-full backdrop-blur-sm">おててで さわったり、キーボードを ぽんぽん してね！ 🎹🍭</p>
     </div>
 
     <script>
@@ -146,8 +161,8 @@
         const ctx = canvas.getContext('2d');
         
         let audioCtx = null;
-        let mainVolume = 0.2; // 初期ボリューム (0.0 〜 1.0)
-        let synthType = 'sine'; // デフォルトのシンセ波形
+        let mainVolume = 0.16; // 幼児の耳に優しい初期ボリューム
+        let playMode = 'classic'; // 'classic' | 'animals' | 'bubbles'
 
         // 画面のフルリサイズ追従
         function resizeCanvas() {
@@ -158,27 +173,27 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // 鮮やかなカラーパレット
+        // 鮮やかなカラーパレット（より明るく、パステルに近い幼児向けの配色にブラッシュアップ）
         const COLORS = [
-            '#FF6347', '#FFA500', '#FFD700', '#32CD32', '#00BFFF', 
-            '#8A2BE2', '#FF1493', '#00FFFF', '#FF69B4', '#ADFF2F'
+            '#FF6B6B', '#FF8E53', '#FFD200', '#4EFE80', '#00D2FC', 
+            '#A55EEA', '#FF5E97', '#00FCD2', '#FF85A2', '#C4FB3D'
         ];
 
-        // 赤ちゃんにウケる絵文字リスト
-        const CHARACTERS = [
-            "★", "♥", "♪", "☀", "☁", "❄", "🍀", "🐱", "🐶", "🐻", 
-            "🐰", "🦁", "🐸", "🐵", "🐤", "🐼", "🚗", "✈", "🚀", "🛸", 
-            "🍎", "🍌", "🍓", "🍉", "👾", "🍬", "🎈", "🔔", "🌟", "🔥"
-        ];
+        // 各モード対応の絵文字リスト
+        const EMOJIS = {
+            classic: ["★", "♥", "♪", "☀", "☁", "❄", "🍀", "🎈", "🌟", "🍒", "🍩"],
+            animals: ["🐱", "🐶", "🐻", "🐰", "🦁", "🐸", "🐵", "🐤", "🐼", "🚗", "✈", "🚀", "🛸", "🚒", "🍎", "🍌", "🍓", "🍉"],
+            bubbles: ["🫧"]
+        };
 
-        // 高音質の心地よいピコピコ音階 (C4 ~ C6)
+        // 心地よい五音音階（ペンタトニックスケール：適当に弾いても絶対に不協和音にならない、和風・アジアの優しい癒やし音階）
         const SCALE = [
-            261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, // Do-Re-Mi... C4~B4
-            523.25, 587.33, 659.25, 698.46, 783.99, 880.00, 987.77, // C5~B5
-            1046.50, 1174.66, 1318.51 // C6~E6
+            261.63, 293.66, 329.63, 392.00, 440.00, // C4, D4, E4, G4, A4
+            523.25, 587.33, 659.25, 783.99, 880.00, // C5, D5, E5, G5, A5
+            1046.50, 1174.66, 1318.51, 1567.98, 1760.00 // C6, D6, E6, G6, A6
         ];
 
-        // --- 2. シンセサイザー（音響合成）機能 ---
+        // --- 2. シンセサイザー音源エンジン（Web Audio API） ---
         function initAudio() {
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -188,71 +203,150 @@
             }
         }
 
+        // 音声を再生（ピッチ、および現在のモードに基づく効果音）
         function playSound(pitchIndex) {
             if (!audioCtx) return;
             initAudio();
 
             const baseFreq = SCALE[pitchIndex % SCALE.length];
-            const now = audioCtx.currentTime;
 
-            if (synthType === 'sine-chord') {
-                // キラキラした和音（三和音）
-                playTone(baseFreq, 0.4, 'sine');
-                playTone(baseFreq * 1.25, 0.25, 'sine'); // 長三度
-                playTone(baseFreq * 1.5, 0.25, 'sine');  // 完全五度
+            if (playMode === 'bubbles') {
+                // シャボン玉の「ポコッ！」という破裂音シンセ
+                playBubbleSound();
+            } else if (playMode === 'animals') {
+                // どうぶつ：ピョーン！というピッチが変化するコミカルな音
+                playBoingSound(baseFreq);
             } else {
-                // シンプルな単音
-                playTone(baseFreq, 0.5, synthType);
+                // 通常：キラキラした温かいサイン・三角和音
+                playWarmTone(baseFreq);
             }
         }
 
-        function playTone(frequency, relativeVolume, type) {
+        // 1. オルゴール風のあたたかい音
+        function playWarmTone(frequency) {
+            const osc = audioCtx.createOscillator();
+            const osc2 = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+
+            // ちょっとオクターブ上の倍音を重ねてキラキラ感を付与
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(frequency * 2, audioCtx.currentTime);
+
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.4 * mainVolume, audioCtx.currentTime + 0.02);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.2); // 長めのエコー
+
+            osc.connect(gainNode);
+            osc2.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            osc.start();
+            osc2.start();
+            osc.stop(audioCtx.currentTime + 1.2);
+            osc2.stop(audioCtx.currentTime + 1.2);
+        }
+
+        // 2. コミカルな「ぽよん」音（周波数の高速スライド）
+        function playBoingSound(frequency) {
             const osc = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
 
-            osc.type = type;
-            osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+            osc.type = 'sine';
+            // 低いピッチから一気にスライドアップして「ぽよん」を作る
+            osc.frequency.setValueAtTime(frequency * 0.4, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(frequency * 1.3, audioCtx.currentTime + 0.15);
+            osc.frequency.exponentialRampToValueAtTime(frequency, audioCtx.currentTime + 0.3);
 
-            // 音の減衰（プツプツ鳴らないよう、アタック＆ディケイを設定）
             gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-            gainNode.gain.linearRampToValueAtTime(relativeVolume * mainVolume, audioCtx.currentTime + 0.02); // 素早いアタック
-            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.8); // 豊かな余韻
+            gainNode.gain.linearRampToValueAtTime(0.5 * mainVolume, audioCtx.currentTime + 0.03);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.6);
 
             osc.connect(gainNode);
             gainNode.connect(audioCtx.destination);
 
-            osc.start(audioCtx.currentTime);
-            osc.stop(audioCtx.currentTime + 0.8);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.6);
         }
 
-        // --- 3. パーティクルシステム（画面エフェクト） ---
+        // 3. シャボン玉が弾ける「ポコッ」という短い音
+        function playBubbleSound() {
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            osc.type = 'sine';
+            // 超高速のピッチスライドダウンで叩き・破裂感を演出
+            const randomPitch = 400 + Math.random() * 300;
+            osc.frequency.setValueAtTime(randomPitch, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(60, audioCtx.currentTime + 0.05);
+
+            gainNode.gain.setValueAtTime(0.6 * mainVolume, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.06);
+
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.08);
+        }
+
+        // --- 3. パーティクルシステム（お顔、シャボン玉、スペシャル） ---
         const particles = [];
         let flashColor = null;
         let flashOpacity = 0;
 
         class Particle {
-            constructor(x, y, char = null) {
+            constructor(x, y, isSpecial = false, dragSpawn = false) {
                 this.x = x;
                 this.y = y;
                 this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
-                this.size = Math.floor(Math.random() * 60) + 35; // 赤ちゃんが見えやすい大きさ
-                this.char = char || CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
                 
-                // 形状決定：円、リング、四角、星、テキスト（絵文字）
-                this.shapes = ["circle", "ring", "square", "star", "text"];
-                this.shape = char ? "text" : this.shapes[Math.floor(Math.random() * this.shapes.length)];
+                // スペシャルな大きなキャラ、ドラッグ時の小さな軌跡、通常の図形
+                if (isSpecial) {
+                    this.size = Math.floor(Math.random() * 80) + 100; // 超巨大！
+                    this.shape = "special";
+                } else if (dragSpawn) {
+                    this.size = Math.floor(Math.random() * 15) + 15;  // 控えめ
+                    this.shape = "text";
+                } else {
+                    this.size = Math.floor(Math.random() * 55) + 40;  // 通常
+                    const defaultShapes = ["circle", "square", "star", "text"];
+                    this.shape = defaultShapes[Math.floor(Math.random() * defaultShapes.length)];
+                }
 
-                // 上向きに勢いよく飛び出す物理計算
-                const angle = Math.random() * (Math.PI * 0.6) - (Math.PI * 0.8); // -36度〜-144度の範囲（上方）
-                const speed = Math.random() * 12 + 6;
-                this.vx = Math.cos(angle) * speed;
-                this.vy = Math.sin(angle) * speed;
+                // モードに応じて中身の絵文字をセット
+                const currentEmojiPool = EMOJIS[playMode];
+                this.char = currentEmojiPool[Math.floor(Math.random() * currentEmojiPool.length)];
+
+                // シャボン玉モードの場合は全員円・丸ベースになる
+                if (playMode === 'bubbles' && !isSpecial) {
+                    this.shape = Math.random() < 0.4 ? "bubble" : "text"; // 泡か文字
+                    this.char = "🫧";
+                }
+
+                // 物理パラメーター
+                if (playMode === 'bubbles') {
+                    // シャボン玉はふわふわと上に登っていく
+                    this.vx = Math.random() * 3 - 1.5;
+                    this.vy = -(Math.random() * 2 + 1);
+                    this.gravity = -0.02; // 逆重力
+                    this.decay = Math.random() * 0.005 + 0.004; // 長生きする
+                } else {
+                    // 通常と動物：上向きに飛び出す
+                    const angle = Math.random() * (Math.PI * 0.6) - (Math.PI * 0.8);
+                    const speed = isSpecial ? (Math.random() * 4 + 4) : (Math.random() * 10 + 6);
+                    this.vx = Math.cos(angle) * speed;
+                    this.vy = Math.sin(angle) * speed;
+                    this.gravity = 0.25;
+                    this.decay = isSpecial ? 0.008 : (Math.random() * 0.015 + 0.012);
+                }
 
                 this.rotation = 0;
                 this.rotSpeed = Math.random() * 6 - 3;
                 this.alpha = 1;
-                this.decay = Math.random() * 0.015 + 0.01; // 徐々に消えるスピード
-                this.gravity = 0.3; // 重力
+                this.wiggleOffset = Math.random() * 100; // シャボン玉などの揺らぎ用
             }
 
             update() {
@@ -261,6 +355,11 @@
                 this.y += this.vy;
                 this.rotation += this.rotSpeed;
                 this.alpha -= this.decay;
+
+                // シャボン玉は浮遊中に左右にやさしく揺れる
+                if (playMode === 'bubbles') {
+                    this.x += Math.sin((Date.now() / 200) + this.wiggleOffset) * 0.5;
+                }
             }
 
             draw() {
@@ -272,36 +371,126 @@
                 ctx.globalAlpha = this.alpha;
                 ctx.fillStyle = this.color;
                 ctx.strokeStyle = this.color;
-                ctx.lineWidth = 6;
+                ctx.lineWidth = 5;
 
                 const r = this.size / 2;
 
                 if (this.shape === "circle") {
+                    // 【1〜3才特化】可愛い「お顔」が描かれた笑顔サークル！
                     ctx.beginPath();
                     ctx.arc(0, 0, r, 0, Math.PI * 2);
                     ctx.fill();
-                } else if (this.shape === "ring") {
+
+                    // おめめ
+                    ctx.fillStyle = '#ffffff';
                     ctx.beginPath();
-                    ctx.arc(0, 0, r, 0, Math.PI * 2);
+                    ctx.arc(-r * 0.3, -r * 0.1, r * 0.18, 0, Math.PI * 2);
+                    ctx.arc(r * 0.3, -r * 0.1, r * 0.18, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#1e293b';
+                    ctx.beginPath();
+                    ctx.arc(-r * 0.3, -r * 0.1, r * 0.09, 0, Math.PI * 2);
+                    ctx.arc(r * 0.3, -r * 0.1, r * 0.09, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // にっこりおくち
+                    ctx.strokeStyle = '#1e293b';
+                    ctx.lineWidth = Math.max(2, r * 0.08);
+                    ctx.lineCap = "round";
+                    ctx.beginPath();
+                    ctx.arc(0, r * 0.15, r * 0.35, 0, Math.PI);
                     ctx.stroke();
+
                 } else if (this.shape === "square") {
+                    // 可愛いお顔の角丸しかく
                     ctx.beginPath();
-                    ctx.roundRect(-r, -r, this.size, this.size, 10);
+                    ctx.roundRect(-r, -r, this.size, this.size, r * 0.3);
                     ctx.fill();
+
+                    // しかくのおめめとおくち
+                    ctx.fillStyle = '#1e293b';
+                    ctx.beginPath();
+                    ctx.arc(-r * 0.3, -r * 0.1, r * 0.1, 0, Math.PI * 2);
+                    ctx.arc(r * 0.3, -r * 0.1, r * 0.1, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.strokeStyle = '#1e293b';
+                    ctx.lineWidth = Math.max(2, r * 0.08);
+                    ctx.beginPath();
+                    ctx.arc(0, r * 0.1, r * 0.25, 0.1, Math.PI - 0.1);
+                    ctx.stroke();
+
                 } else if (this.shape === "star") {
                     ctx.beginPath();
                     for (let i = 0; i < 10; i++) {
-                        const curR = i % 2 === 0 ? r : r / 2;
+                        const curR = i % 2 === 0 ? r : r * 0.45;
                         const currAngle = (i * Math.PI / 5);
                         ctx.lineTo(Math.cos(currAngle) * curR, Math.sin(currAngle) * curR);
                     }
                     ctx.closePath();
                     ctx.fill();
+
+                    // 星にも小さなおめめ
+                    ctx.fillStyle = '#1e293b';
+                    ctx.beginPath();
+                    ctx.arc(-r * 0.2, 0, r * 0.08, 0, Math.PI * 2);
+                    ctx.arc(r * 0.2, 0, r * 0.08, 0, Math.PI * 2);
+                    ctx.fill();
+
+                } else if (this.shape === "bubble") {
+                    // リアルでプルンプルンに揺れるシャボン玉
+                    ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, r, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    // ハイライト（立体的に見せる白い光沢）
+                    ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+                    ctx.beginPath();
+                    ctx.arc(-r * 0.4, -r * 0.4, r * 0.25, 0, Math.PI * 2);
+                    ctx.fill();
+
                 } else if (this.shape === "text") {
                     ctx.font = `bold ${this.size}px Arial, sans-serif`;
                     ctx.textAlign = "center";
                     ctx.textBaseline = "middle";
                     ctx.fillText(this.char, 0, 0);
+
+                } else if (this.shape === "special") {
+                    // スペシャルデカキャラ（お日様風、にこにこスマイル）
+                    ctx.strokeStyle = this.color;
+                    ctx.lineWidth = 10;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, r * 0.8, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.fillStyle = '#FFD200'; // きいろ
+                    ctx.fill();
+
+                    // ひかりのトゲトゲ
+                    for (let i = 0; i < 12; i++) {
+                        const angle = (i * Math.PI / 6);
+                        ctx.strokeStyle = '#FF8E53';
+                        ctx.lineWidth = 8;
+                        ctx.beginPath();
+                        ctx.moveTo(Math.cos(angle) * (r * 0.95), Math.sin(angle) * (r * 0.95));
+                        ctx.lineTo(Math.cos(angle) * (r * 1.25), Math.sin(angle) * (r * 1.25));
+                        ctx.stroke();
+                    }
+
+                    // でっかいおめめとおくち
+                    ctx.fillStyle = '#1e293b';
+                    ctx.beginPath();
+                    ctx.arc(-r * 0.25, -r * 0.1, r * 0.12, 0, Math.PI * 2);
+                    ctx.arc(r * 0.25, -r * 0.1, r * 0.12, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.strokeStyle = '#1e293b';
+                    ctx.lineWidth = 6;
+                    ctx.beginPath();
+                    ctx.arc(0, r * 0.1, r * 0.3, 0, Math.PI);
+                    ctx.stroke();
                 }
 
                 ctx.restore();
@@ -310,85 +499,134 @@
 
         // --- 4. インタラクションハンドラ ---
 
-        // 入力をキャッチしたときのアクション（中心点 X, Y, オプションのカスタム文字）
+        // キーや画面タップ時に盛大に噴射
         function triggerResponse(x, y, customChar = null) {
-            // 背景のピカッと光るフラッシュ（即時変化リンク）
             flashColor = COLORS[Math.floor(Math.random() * COLORS.length)];
-            flashOpacity = 0.35; // 眩しすぎない適度な明るさ
+            flashOpacity = 0.28; // フラッシュの眩しさを赤ちゃんの目にやさしく調整
 
-            // サウンド再生（座標からピッチを算出、または完全にランダム）
-            const pitchIndex = Math.floor((x / window.innerWidth) * SCALE.length) + Math.floor(Math.random() * 3);
+            // ピッチとサウンド再生
+            const pitchIndex = Math.floor((x / window.innerWidth) * SCALE.length);
             playSound(pitchIndex);
 
-            // パーティクル噴射
-            const count = Math.floor(Math.random() * 8) + 12; // 12~20個
+            // 1) 通常パーティクルを複数発生
+            const count = Math.floor(Math.random() * 8) + 12; // 12〜20個
             for (let i = 0; i < count; i++) {
-                particles.push(new Particle(x, y, customChar));
+                particles.push(new Particle(x, y, false, false));
             }
 
-            // ガイド文字を徐々に隠す
-            document.getElementById('guide-text').style.opacity = '0.1';
+            // 2) 珍しい確率（約10%）で、超特大の「にこにこお日様（スペシャル）」を出現
+            if (Math.random() < 0.12 && playMode !== 'bubbles') {
+                particles.push(new Particle(x, y, true, false));
+            }
+
+            // ガイドテキストを徐々に透明にする
+            document.getElementById('guide-text').style.opacity = '0.05';
         }
 
-        // キーボード入力時のブラウザ標準ショートカット無効化（キーダウン）
-        window.addEventListener('keydown', (e) => {
-            // ESCキーは終了や設定に使用するためブロックしない
-            if (e.key === 'Escape') return;
+        // 【新機能】ドラッグ（おててでなぞる）だけで描ける魔法の虹色 trail
+        let lastDragX = 0;
+        let lastDragY = 0;
+        let isDragging = false;
 
-            // F1〜F12、Tab、Alt、Windowsキーなどすべてのキーに対してブラウザ標準動作をブロック
+        function handleDrag(x, y) {
+            if (!isDragging) return;
+
+            const dist = Math.hypot(x - lastDragX, y - lastDragY);
+            if (dist > 25) { // 25ピクセル移動するごとに綺麗な星/泡が尾を引く
+                lastDragX = x;
+                lastDragY = y;
+
+                // なぞる速さに合わせたピッチ（画面のX座標に比例）
+                const pitchIndex = Math.floor((x / window.innerWidth) * SCALE.length);
+                playSound(pitchIndex);
+
+                // 単発の軌跡パーティクルを生成
+                particles.push(new Particle(x, y, false, true));
+            }
+        }
+
+        // キーボード入力（何が押されてもOK！）
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') return;
             e.preventDefault();
 
-            // 表示するキーの文字を抽出
             let keyStr = e.key;
             if (keyStr.length > 1) {
-                keyStr = null; // 長い特殊キーはランダムな絵文字をアサイン
+                keyStr = null; // ShiftやEnterなどは可愛い絵文字に任せる
             }
 
-            // 画面の中央周辺のランダムな位置から噴き出す
+            // 画面の中央周辺から噴き出す
             const rx = Math.random() * (window.innerWidth - 200) + 100;
-            const ry = Math.random() * (window.innerHeight - 200) + 100;
+            const ry = Math.random() * (window.innerHeight - 300) + 150;
 
             triggerResponse(rx, ry, keyStr);
         }, { passive: false });
 
-        // さらに徹底してブロック（キープレス・キーアップ）
-        window.addEventListener('keypress', (e) => {
-            if (e.key !== 'Escape') e.preventDefault();
-        }, { passive: false });
-        window.addEventListener('keyup', (e) => {
-            if (e.key !== 'Escape') e.preventDefault();
-        }, { passive: false });
+        window.addEventListener('keypress', (e) => { if (e.key !== 'Escape') e.preventDefault(); }, { passive: false });
+        window.addEventListener('keyup', (e) => { if (e.key !== 'Escape') e.preventDefault(); }, { passive: false });
 
-        // マウスおよびタッチイベント
+        // マウスによる「なぞり（ドラッグ）」
         window.addEventListener('mousedown', (e) => {
-            // 設定ボタンや設定モーダル上でのタップをバイパス
-            if (e.target.closest('#menu-btn') || e.target.closest('#settings-modal') || e.target.closest('#start-screen')) return;
+            if (e.target.closest('#menu-btn') || e.target.closest('#settings-modal') || e.target.closest('#start-screen') || e.target.closest('#quick-mode-btn')) return;
+            isDragging = true;
+            lastDragX = e.clientX;
+            lastDragY = e.clientY;
             triggerResponse(e.clientX, e.clientY);
         });
 
+        window.addEventListener('mousemove', (e) => {
+            handleDrag(e.clientX, e.clientY);
+        });
+
+        window.addEventListener('mouseup', () => { isDragging = false; });
+
+        // スマートフォンやiPadでの「なぞり（スワイプ）」マルチタッチ
         window.addEventListener('touchstart', (e) => {
-            if (e.target.closest('#menu-btn') || e.target.closest('#settings-modal') || e.target.closest('#start-screen')) return;
+            if (e.target.closest('#menu-btn') || e.target.closest('#settings-modal') || e.target.closest('#start-screen') || e.target.closest('#quick-mode-btn')) return;
             
-            // すべてのタッチポイント（マルチタッチ対応）で反応
+            isDragging = true;
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const touch = e.changedTouches[i];
+                lastDragX = touch.clientX;
+                lastDragY = touch.clientY;
                 triggerResponse(touch.clientX, touch.clientY);
             }
         }, { passive: true });
 
+        window.addEventListener('touchmove', (e) => {
+            for (let i = 0; i < e.touches.length; i++) {
+                const touch = e.touches[i];
+                handleDrag(touch.clientX, touch.clientY);
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchend', () => { isDragging = false; });
+
         // --- 5. メインアニメーションループ ---
+        
+        // 【シャボン玉モード用】キーボードや指に頼らず、時々ゆっくり自動で下からシャボン玉を浮かび上がらせる
+        let lastBubbleSpawn = 0;
+
         function loop() {
             // 背景を描画
-            ctx.fillStyle = '#0f172a';
+            ctx.fillStyle = '#0b0f19';
             ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
 
-            // ピカッと光るフラッシュレイヤーの重ね合わせ
+            // 背景のフラッシュ残像
             if (flashOpacity > 0) {
                 ctx.fillStyle = flashColor;
                 ctx.globalAlpha = flashOpacity;
                 ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
                 ctx.globalAlpha = 1;
-                flashOpacity -= 0.03; // フェードアウト
+                flashOpacity -= 0.02; // やさしくゆっくり減退
+            }
+
+            // シャボン玉モード中の自動湧き出し
+            if (playMode === 'bubbles' && Date.now() - lastBubbleSpawn > 350) {
+                lastBubbleSpawn = Date.now();
+                // 画面下のランダムな場所からそっと生成
+                const bx = Math.random() * window.innerWidth;
+                particles.push(new Particle(bx, window.innerHeight + 50));
             }
 
             // パーティクルの更新と描画
@@ -397,8 +635,8 @@
                 p.update();
                 p.draw();
 
-                // 画面外に落ちたか透明になったら削除
-                if (p.alpha <= 0 || p.y > window.innerHeight + 100) {
+                // 画面上部（シャボン玉）または画面下部（他モード）へ流出した場合は削除
+                if (p.alpha <= 0 || p.y > window.innerHeight + 150 || p.y < -150) {
                     particles.splice(i, 1);
                 }
             }
@@ -406,7 +644,7 @@
             requestAnimationFrame(loop);
         }
 
-        // --- 6. システム・UI制御＆誤操作防止ロックシステム ---
+        // --- 6. システム・UI制御＆ロック機能 ---
 
         const startScreen = document.getElementById('start-screen');
         const menuBtn = document.getElementById('menu-btn');
@@ -416,8 +654,9 @@
         const fullscreenBtn = document.getElementById('fullscreen-btn');
         const volumeSlider = document.getElementById('volume-slider');
         const volumeVal = document.getElementById('volume-val');
-        const synthTypeSelect = document.getElementById('synth-type');
         const lockStatus = document.getElementById('lock-status');
+        const quickModeBtn = document.getElementById('quick-mode-btn');
+        const currentModeLabel = document.getElementById('current-mode-label');
 
         // スタート
         startScreen.addEventListener('click', () => {
@@ -427,8 +666,9 @@
                 startScreen.style.display = 'none';
             }, 500);
             
-            // 初回ダミーサウンド
-            playSound(7);
+            // 起動時のウエルカム音階
+            playSound(4);
+            setTimeout(() => playSound(7), 150);
             loop();
         });
 
@@ -439,7 +679,7 @@
             pressTimer = setTimeout(() => {
                 settingsModal.classList.remove('hidden');
                 menuBtn.classList.remove('scale-95', 'bg-amber-600/90');
-            }, 2000); // 2秒間押し続けると開く
+            }, 2000); // 2秒
         }
 
         function cancelPress() {
@@ -447,57 +687,84 @@
             menuBtn.classList.remove('scale-95', 'bg-amber-600/90');
         }
 
-        // PC（マウス）
         menuBtn.addEventListener('mousedown', startPress);
         menuBtn.addEventListener('mouseup', cancelPress);
         menuBtn.addEventListener('mouseleave', cancelPress);
-        // モバイル（タッチ）
-        menuBtn.addEventListener('touchstart', (e) => {
-            e.stopPropagation();
-            startPress();
-        });
+        menuBtn.addEventListener('touchstart', (e) => { e.stopPropagation(); startPress(); });
         menuBtn.addEventListener('touchend', cancelPress);
 
-        // 設定のクローズ
-        function closeMenu() {
-            settingsModal.classList.add('hidden');
-        }
+        // クローズ
+        function closeMenu() { settingsModal.classList.add('hidden'); }
         closeSettings.addEventListener('click', closeMenu);
         resumeBtn.addEventListener('click', closeMenu);
 
-        // 音量コントロール
+        // 音量
         volumeSlider.addEventListener('input', (e) => {
             const val = e.target.value;
             volumeVal.innerText = `${val}%`;
             mainVolume = val / 100;
         });
 
-        // シンセ音色コントロール
-        synthTypeSelect.addEventListener('change', (e) => {
-            synthType = e.target.value;
+        // テーマモード設定のロジック
+        function updatePlayMode(mode) {
+            playMode = mode;
+            
+            // 各種UIの文字更新
+            const labels = {
+                classic: 'にこにこスター',
+                animals: 'どうぶつサファリ',
+                bubbles: 'シャボン玉ぽこぽこ'
+            };
+            currentModeLabel.innerText = labels[mode] || 'にこにこスター';
+
+            // 設定画面内のボタンのアクティブ・非アクティブ視覚調整
+            document.querySelectorAll('.mode-select-btn').forEach(btn => {
+                if (btn.getAttribute('data-mode') === mode) {
+                    btn.classList.add('bg-pink-600');
+                    btn.classList.remove('bg-slate-700');
+                    btn.querySelector('.mode-check').classList.remove('hidden');
+                } else {
+                    btn.classList.add('bg-slate-700');
+                    btn.classList.remove('bg-pink-600');
+                    btn.querySelector('.mode-check').classList.add('hidden');
+                }
+            });
+        }
+
+        // 設定画面内のモード切替
+        document.querySelectorAll('.mode-select-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const targetMode = btn.getAttribute('data-mode');
+                updatePlayMode(targetMode);
+                playSound(8);
+            });
         });
 
-        // Web Keyboard Lock API を要求する関数
+        // 【超便利】画面左上のボタンでお花のように素早くモード切り替えができる
+        quickModeBtn.addEventListener('click', () => {
+            const modeOrder = ['classic', 'animals', 'bubbles'];
+            let nextIndex = (modeOrder.indexOf(playMode) + 1) % modeOrder.length;
+            updatePlayMode(modeOrder[nextIndex]);
+            playSound(11);
+        });
+
+        // Web Keyboard Lock API
         async function requestKeyboardLock() {
             if (navigator.keyboard && typeof navigator.keyboard.lock === 'function') {
                 try {
-                    // 全てのキーボードショートカットをロック
                     await navigator.keyboard.lock();
                     lockStatus.innerText = "🔒 キーボードロック有効！";
                     lockStatus.className = "text-xs text-green-400 font-bold animate-pulse";
-                    console.log("Keyboard lock success!");
                 } catch (error) {
                     lockStatus.innerText = "⚠️ ロック不可 (ブラウザ未対応)";
                     lockStatus.className = "text-xs text-rose-400";
-                    console.warn("Keyboard lock failed:", error);
                 }
             } else {
-                lockStatus.innerText = "⚠️ ロック不可 (ブラウザ未対応)";
+                lockStatus.innerText = "⚠️ ロック不可 (ブラウザ制限)";
                 lockStatus.className = "text-xs text-slate-400";
             }
         }
 
-        // キーボードロックの解除
         function releaseKeyboardLock() {
             if (navigator.keyboard && typeof navigator.keyboard.unlock === 'function') {
                 navigator.keyboard.unlock();
@@ -506,7 +773,7 @@
             }
         }
 
-        // フルスクリーン & キーボードロックの切り替え
+        // フルスクリーン & キーボードロック
         fullscreenBtn.addEventListener('click', () => {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen()
@@ -522,7 +789,6 @@
             }
         });
 
-        // 画面のフルスクリーン状態の変化を監視してロックのオン・オフを追従
         document.addEventListener('fullscreenchange', () => {
             if (!document.fullscreenElement) {
                 fullscreenBtn.innerText = "🖥 フルスクリーン ＆ キーボードロック開始";
